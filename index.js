@@ -1,84 +1,96 @@
-// server.js - RENDER KE LIYE
+// server.js - RENDER DEPLOY KE LIYE
 const express = require('express');
 const ytSearch = require('yt-search');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const app = express();
 
-// ULTRA FAST CACHE - 10 minutes
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+// ⚡ SUPER FAST CACHE (5MB memory)
+const cache = new NodeCache({ 
+    stdTTL: 300, // 5 minutes cache
+    maxKeys: 500,
+    checkperiod: 60 
+});
 
 app.use(cors());
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '5kb' }));
 
-// SINGLE OPTIMIZED ENDPOINT
+// 🚀 SINGLE OPTIMIZED SEARCH ENDPOINT
 app.get('/api/search', async (req, res) => {
+    const start = Date.now();
     try {
-        const startTime = Date.now();
-        const query = (req.query.q || 'trending').trim().toLowerCase();
-        const isDataSaver = req.query.ds === 'true';
+        const query = (req.query.q || 'trending music').trim().substring(0, 100);
+        const isDS = req.query.ds === 'true';
         
-        // CACHE CHECK - INSTANT RESPONSE
-        const cacheKey = `${query}_${isDataSaver}`;
+        // ⚡ INSTANT CACHE RESPONSE
+        const cacheKey = `search_${query}_${isDS}`;
         const cached = cache.get(cacheKey);
         if (cached) {
-            console.log(`CACHE HIT: ${query} - ${Date.now() - startTime}ms`);
+            console.log(`⚡ CACHE: ${query} - ${Date.now() - start}ms`);
             return res.json(cached);
         }
         
-        // PARALLEL SEARCH FOR FASTER RESULTS
-        const searchPromise = ytSearch(query);
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 4000)
-        );
+        // 🔥 PARALLEL FETCHING
+        const searchTasks = [
+            ytSearch(query).catch(e => ({ videos: [] })),
+            new Promise(r => setTimeout(() => r({ videos: [] }), 3000))
+        ];
         
-        const r = await Promise.race([searchPromise, timeoutPromise]);
+        const result = await Promise.race(searchTasks);
+        const videos = result.videos || [];
         
-        if (!r?.videos?.length) {
-            // FALLBACK TO TRENDING
-            const fallback = await ytSearch('trending');
-            const videos = fallback.videos.slice(0, isDataSaver ? 12 : 24);
-            return res.json(videos.map(optimizeVideo));
-        }
-        
-        // OPTIMIZED DATA - MINIMAL PAYLOAD
-        const results = r.videos.slice(0, isDataSaver ? 15 : 30).map(v => ({
-            i: v.videoId, // compressed key
-            t: v.title.substring(0, 80), // max 80 chars
-            h: isDataSaver ? 
+        // 📦 OPTIMIZED DATA STRUCTURE
+        const optimizedVideos = videos.slice(0, isDS ? 18 : 36).map(v => ({
+            i: v.videoId,
+            t: v.title.length > 70 ? v.title.substring(0, 70) + '...' : v.title,
+            h: isDS ? 
                 v.thumbnail.replace('hqdefault', 'mqdefault') : 
                 v.thumbnail.replace('hqdefault', 'sddefault'),
             d: v.timestamp || '',
-            v: v.views || ''
+            v: v.views ? (v.views + ' views') : ''
         }));
         
-        // SET CACHE
-        cache.set(cacheKey, results);
-        console.log(`FRESH FETCH: ${query} - ${Date.now() - startTime}ms`);
+        // 💾 SAVE TO CACHE
+        cache.set(cacheKey, optimizedVideos);
+        console.log(`✅ FRESH: ${query} - ${Date.now() - start}ms`);
         
-        res.json(results);
+        res.json(optimizedVideos);
         
     } catch (error) {
-        console.error('Search error:', error.message);
-        // RETURN EMPTY ARRAY INSTEAD OF ERROR
-        res.json([]);
+        console.log(`❌ ERROR: ${error.message}`);
+        res.json([]); // Never crash
     }
 });
 
-function optimizeVideo(v) {
-    return {
+// 📺 TRENDING VIDEOS (Separate Cache)
+app.get('/api/trending', async (req, res) => {
+    const cacheKey = 'trending_' + (req.query.ds === 'true');
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+    
+    const result = await ytSearch('trending today');
+    const videos = result.videos.slice(0, 24).map(v => ({
         i: v.videoId,
-        t: v.title.substring(0, 80),
-        h: v.thumbnail,
+        t: v.title.substring(0, 70),
+        h: req.query.ds === 'true' ? 
+            v.thumbnail.replace('hqdefault', 'mqdefault') : 
+            v.thumbnail,
         d: v.timestamp || '',
         v: v.views || ''
-    };
-}
+    }));
+    
+    cache.set(cacheKey, videos);
+    res.json(videos);
+});
 
-// HEALTH CHECK
-app.get('/ping', (req, res) => {
-    res.send('OK');
+// 🩺 HEALTH CHECK
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: '🚀 ULTRA FAST', 
+        cache: cache.getStats(),
+        uptime: process.uptime() 
+    });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 ULTRA-FAST API on ${PORT}`));
+app.listen(PORT, () => console.log(`🔥 API Running: http://localhost:${PORT}`));
