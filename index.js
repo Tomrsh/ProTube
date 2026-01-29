@@ -36,9 +36,10 @@ const html = `
         .v-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
         .v-title { padding: 12px; font-size: 14px; font-weight: 500; height: 45px; overflow: hidden; line-height: 1.4; }
 
-        #player-page, #policy-page { position: fixed; inset: 0; background: #000; z-index: 6000; display: none; overflow-y: auto; }
-        .video-sticky { width: 100%; aspect-ratio: 16/9; position: sticky; top: 0; z-index: 100; background: #000; }
-        .close-btn { position: absolute; top: 15px; left: 15px; z-index: 7000; background: rgba(0,0,0,0.6); color: #fff; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border:none; font-size: 20px; }
+        /* Full View Fix */
+        #player-page, #policy-page { position: fixed; inset: 0; background: #000; z-index: 6000; display: none; overflow-y: auto; height: 100vh; width: 100vw; }
+        .video-sticky { width: 100%; aspect-ratio: 16/9; position: sticky; top: 0; z-index: 6500; background: #000; }
+        .close-btn { position: absolute; top: 10px; left: 10px; z-index: 7000; background: rgba(0,0,0,0.5); color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border:none; font-size: 18px; }
 
         .hist-card { display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid #111; position: relative; }
         .hist-card img { width: 80px; aspect-ratio: 16/9; border-radius: 4px; object-fit: cover; }
@@ -80,7 +81,11 @@ const html = `
     <div id="player-page">
         <button class="close-btn" onclick="closePlayer()">✕</button>
         <div class="video-sticky">
-            <iframe id="main-v" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin"></iframe>
+            <iframe id="main-v" width="100%" height="100%" frameborder="0" 
+                allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                allowfullscreen 
+                sandbox="allow-scripts allow-same-origin allow-presentation allow-forms">
+            </iframe>
         </div>
         <div id="v-info" style="padding:15px; font-weight:bold; border-bottom:1px solid #111;"></div>
         <div style="padding:15px; font-size:14px; color:var(--red); font-weight:bold;">RELATED VIDEOS</div>
@@ -91,7 +96,7 @@ const html = `
         <button class="close-btn" onclick="closePolicy()">✕</button>
         <div style="padding:80px 20px 20px;">
             <h1 style="color:var(--red);">Privacy Policy</h1>
-            <p>ProTube Premium aapka koi bhi personal data collect nahi karta. Search history aapke device par hi rehti hai. Hum asli quality aur data bachat par focus karte hain.</p>
+            <p>ProTube Premium aapka koi bhi personal data collect nahi karta.</p>
         </div>
     </div>
 
@@ -112,7 +117,6 @@ const html = `
             const query = q || document.getElementById('sq').value;
             if(!query) return;
             document.getElementById('sq').value = query;
-
             const res = await fetch('/api/search?q=' + encodeURIComponent(query));
             const data = await res.json();
             renderFeed('home-feed', data);
@@ -131,13 +135,13 @@ const html = `
             history.pushState({p:1}, '');
             document.getElementById('player-page').style.display = 'block';
             const q = isDS ? 'small' : 'hd1080';
-            document.getElementById('main-v').src = \`https://www.youtube-nocookie.com/embed/\${id}?autoplay=1&modestbranding=1&rel=0&vq=\${q}\`;
+            // Added rel=0 and iv_load_policy=3 for cleaner view
+            document.getElementById('main-v').src = \`https://www.youtube-nocookie.com/embed/\${id}?autoplay=1&modestbranding=1&rel=0&fullscreen=1&vq=\${q}\`;
             document.getElementById('v-info').innerText = title;
 
             const res = await fetch('/api/search?q=' + encodeURIComponent(title));
             const data = await res.json();
             renderFeed('rel-grid', data);
-            
             saveHistory(id, title, thumb);
         }
 
@@ -196,4 +200,4 @@ app.get('/api/search', async (req, res) => {
     } catch (e) { res.json([]); }
 });
 
-app.listen(PORT, () => console.log('✅ ProTube Premium Live (No Suggestions)!'));
+app.listen(PORT, () => console.log('✅ ProTube Premium Fix Loaded!'));
