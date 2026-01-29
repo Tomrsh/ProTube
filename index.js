@@ -15,7 +15,6 @@ const html = `
         * { -webkit-tap-highlight-color: transparent; user-select: none; box-sizing: border-box; outline: none; }
         body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; overflow-x: hidden; }
 
-        /* Header UI */
         header { 
             background: #000; padding: 10px 15px; display: flex; align-items: center; 
             position: sticky; top: 0; z-index: 2000; border-bottom: 1px solid var(--border); gap: 10px;
@@ -27,31 +26,20 @@ const html = `
         .search-box { background: #1a1a1a; border-radius: 25px; display: flex; padding: 7px 15px; border: 1px solid #333; }
         #sq { background: none; border: none; color: #fff; width: 100%; font-size: 14px; user-select: text; }
 
-        /* Stable Suggestions */
-        #suggestions { 
-            position: absolute; top: 45px; left: 0; width: 100%; background: #1a1a1a; 
-            border-radius: 12px; display: none; z-index: 3000; border: 1px solid #333; overflow: hidden;
-        }
-        .sugg-item { padding: 12px 15px; border-bottom: 1px solid #222; font-size: 14px; cursor: pointer; color: #ccc; }
-
-        /* Sidebar & Menu */
         .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: #000; z-index: 5000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--border); overflow-y: auto; }
         .sidebar.active { left: 0; }
         .menu-item { padding: 18px 20px; border-bottom: 1px solid #111; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         #side-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; z-index: 4000; }
 
-        /* Video Feed */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 12px; }
         .v-card { background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
         .v-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
         .v-title { padding: 12px; font-size: 14px; font-weight: 500; height: 45px; overflow: hidden; line-height: 1.4; }
 
-        /* Player Layer */
         #player-page, #policy-page { position: fixed; inset: 0; background: #000; z-index: 6000; display: none; overflow-y: auto; }
         .video-sticky { width: 100%; aspect-ratio: 16/9; position: sticky; top: 0; z-index: 100; background: #000; }
         .close-btn { position: absolute; top: 15px; left: 15px; z-index: 7000; background: rgba(0,0,0,0.6); color: #fff; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border:none; font-size: 20px; }
 
-        /* History Management */
         .hist-card { display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid #111; position: relative; }
         .hist-card img { width: 80px; aspect-ratio: 16/9; border-radius: 4px; object-fit: cover; }
         .hist-del { color: var(--red); font-size: 18px; padding: 5px; position: absolute; right: 10px; bottom: 10px; }
@@ -62,7 +50,7 @@ const html = `
         .switch.on::after { left: 18px; }
     </style>
 </head>
-<body onclick="hideSugg()">
+<body>
 
     <div id="side-overlay" onclick="toggleSB(false)"></div>
     
@@ -82,9 +70,8 @@ const html = `
         <div class="logo" onclick="location.href='/'">Pro<span>Tube</span></div>
         <div class="search-container" onclick="event.stopPropagation()">
             <div class="search-box">
-                <input type="text" id="sq" placeholder="Search..." autocomplete="off" oninput="fetchSugg()" onkeyup="if(event.key==='Enter') startSearch()">
+                <input type="text" id="sq" placeholder="Search..." autocomplete="off" onkeyup="if(event.key==='Enter') startSearch()">
             </div>
-            <div id="suggestions"></div>
         </div>
     </header>
 
@@ -121,30 +108,10 @@ const html = `
             ov.style.display = show ? 'block' : 'none';
         }
 
-        function hideSugg() { document.getElementById('suggestions').style.display = 'none'; }
-
-        // STABLE SUGGESTIONS LOGIC
-        let lastQ = "";
-        async function fetchSugg() {
-            const q = document.getElementById('sq').value;
-            if(q === lastQ || q.length < 2) return;
-            lastQ = q;
-
-            const res = await fetch('/api/suggest?q=' + encodeURIComponent(q));
-            const data = await res.json();
-            const box = document.getElementById('suggestions');
-            
-            if(data.length > 0) {
-                box.innerHTML = data.map(s => \`<div class="sugg-item" onclick="startSearch('\${s}')">\${s}</div>\`).join('');
-                box.style.display = 'block';
-            }
-        }
-
         async function startSearch(q) {
             const query = q || document.getElementById('sq').value;
             if(!query) return;
             document.getElementById('sq').value = query;
-            hideSugg();
 
             const res = await fetch('/api/search?q=' + encodeURIComponent(query));
             const data = await res.json();
@@ -222,14 +189,6 @@ const html = `
 
 app.get('/', (req, res) => res.send(html));
 
-app.get('/api/suggest', async (req, res) => {
-    try {
-        const r = await ytSearch(req.query.q);
-        const suggs = r.videos.slice(0, 6).map(v => v.title.split(/[|\\-]/)[0].trim());
-        res.json([...new Set(suggs)]);
-    } catch (e) { res.json([]); }
-});
-
 app.get('/api/search', async (req, res) => {
     try {
         const r = await ytSearch(req.query.q || 'trending');
@@ -237,4 +196,4 @@ app.get('/api/search', async (req, res) => {
     } catch (e) { res.json([]); }
 });
 
-app.listen(PORT, () => console.log('✅ ProTube Premium Stable Live!'));
+app.listen(PORT, () => console.log('✅ ProTube Premium Live (No Suggestions)!'));
