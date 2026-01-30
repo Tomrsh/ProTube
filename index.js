@@ -13,51 +13,53 @@ const html = `
     <style>
         :root { --red: #ff0000; --bg: #000; --surface: #0f0f0f; --border: #222; }
         * { -webkit-tap-highlight-color: transparent; user-select: none; box-sizing: border-box; outline: none; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; overflow-x: hidden; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow-x: hidden; }
 
-        /* Header UI */
         header { 
-            background: #000; padding: 10px 15px; display: flex; align-items: center; 
+            background: rgba(0,0,0,0.95); padding: 10px 15px; display: flex; align-items: center; 
             position: sticky; top: 0; z-index: 2000; border-bottom: 1px solid var(--border); gap: 10px;
+            backdrop-filter: blur(10px);
         }
-        .logo { font-size: 20px; font-weight: 900; color: var(--red); cursor: pointer; white-space: nowrap; }
+        .logo { font-size: 20px; font-weight: 900; color: var(--red); cursor: pointer; white-space: nowrap; letter-spacing: -1px; }
         .logo span { color: #fff; }
         
         .search-container { flex: 1; }
-        .search-box { background: #1a1a1a; border-radius: 25px; display: flex; padding: 7px 15px; border: 1px solid #333; }
+        .search-box { background: #1a1a1a; border-radius: 25px; display: flex; padding: 7px 15px; border: 1px solid #333; transition: 0.3s; }
+        .search-box:focus-within { border-color: var(--red); background: #222; }
         #sq { background: none; border: none; color: #fff; width: 100%; font-size: 14px; user-select: text; }
 
-        /* Sidebar UI */
         .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: #000; z-index: 5000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--border); overflow-y: auto; }
         .sidebar.active { left: 0; }
         .menu-item { padding: 18px 20px; border-bottom: 1px solid #111; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         #side-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; z-index: 4000; }
 
-        /* Loading Spinner */
         #loader { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #222; border-top: 4px solid var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        .spinner { width: 45px; height: 45px; border: 4px solid #222; border-top: 4px solid var(--red); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Video Feed */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 15px; }
-        .v-card { background: var(--surface); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+        .v-card { background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); transition: 0.3s; }
+        .v-card:active { transform: scale(0.95); }
         .v-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
-        .v-title { padding: 8px; font-size: 12px; font-weight: 500; height: 42px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+        .v-title { padding: 10px; font-size: 13px; font-weight: 500; height: 46px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; color: #eee; }
 
-        /* Full Player */
-        #player-page { position: fixed; inset: 0; background: #000; z-index: 6000; display: none; overflow-y: auto; }
+        #player-page { position: fixed; inset: 0; background: #000; z-index: 6000; display: none; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
         .video-sticky { width: 100%; aspect-ratio: 16/9; position: sticky; top: 0; z-index: 6500; background: #000; }
-        .close-btn { position: absolute; top: 10px; left: 10px; z-index: 7000; background: rgba(0,0,0,0.6); color: #fff; border-radius: 50%; width: 35px; height: 35px; border: none; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        /* Anti-Click Layer: Isse YouTube logo par click nahi hoga */
+        .player-wrapper { position: relative; width: 100%; height: 100%; }
 
-        /* History Cards */
-        .hist-card { display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid #111; position: relative; }
-        .hist-card img { width: 80px; aspect-ratio: 16/9; border-radius: 4px; object-fit: cover; }
-        .hist-del { color: var(--red); font-size: 18px; padding: 5px; position: absolute; right: 10px; bottom: 5px; }
+        .close-btn { position: absolute; top: 12px; left: 12px; z-index: 7000; background: rgba(0,0,0,0.6); color: #fff; border-radius: 50%; width: 36px; height: 36px; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
 
-        .switch { width: 34px; height: 18px; background: #333; border-radius: 10px; position: relative; }
+        .hist-card { display: flex; gap: 10px; padding: 12px; border-bottom: 1px solid #111; position: relative; }
+        .hist-card img { width: 90px; aspect-ratio: 16/9; border-radius: 6px; object-fit: cover; }
+        .hist-del { color: var(--red); font-size: 20px; padding: 5px; position: absolute; right: 10px; bottom: 8px; }
+
+        .switch { width: 38px; height: 20px; background: #333; border-radius: 12px; position: relative; }
         .switch.on { background: var(--red); }
-        .switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: 0.2s; }
-        .switch.on::after { left: 18px; }
+        .switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.2s; }
+        .switch.on::after { left: 20px; }
     </style>
 </head>
 <body>
@@ -66,18 +68,18 @@ const html = `
     <div id="loader"><div class="spinner"></div></div>
     
     <div class="sidebar" id="sb">
-        <div style="padding: 25px 20px; font-size: 20px; font-weight: 900; color: var(--red); border-bottom: 1px solid var(--border);">Pro<span>Tube</span></div>
+        <div style="padding: 25px 20px; font-size: 22px; font-weight: 900; color: var(--red); border-bottom: 1px solid var(--border);">Pro<span>Tube</span></div>
         <div class="menu-item" onclick="toggleDS()">
             Ultra Data Saver
             <div class="switch" id="ds-toggle"></div>
         </div>
-        <div style="padding: 15px; font-size: 12px; color: #555;">HISTORY</div>
+        <div style="padding: 15px 20px; font-size: 11px; color: #555; font-weight: bold;">RECENT HISTORY</div>
         <div id="h-list"></div>
     </div>
 
     <header>
-        <div onclick="toggleSB(true)" style="font-size:24px; cursor:pointer; padding-right:5px;">☰</div>
-        <div class="logo" onclick="location.reload()">Pro<span>Tube</span></div>
+        <div onclick="toggleSB(true)" style="font-size:24px; cursor:pointer; padding: 0 5px;">☰</div>
+        <div class="logo" onclick="location.href='/'">Pro<span>Tube</span></div>
         <div class="search-container">
             <div class="search-box">
                 <input type="text" id="sq" placeholder="Search..." onkeyup="if(event.key==='Enter') startSearch()">
@@ -88,18 +90,32 @@ const html = `
     <div id="home-feed" class="grid"></div>
 
     <div id="player-page">
-        <button class="close-btn" onclick="closePlayer()">✕</button>
+        <button class="close-btn" onclick="history.back()">✕</button>
         <div class="video-sticky">
-            <iframe id="main-v" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+            <div class="player-wrapper">
+                <iframe id="main-v" width="100%" height="100%" frameborder="0" 
+                    allow="autoplay; fullscreen; picture-in-picture" 
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                    allowfullscreen>
+                </iframe>
+            </div>
         </div>
-        <div id="v-info" style="padding:15px; font-weight:bold;"></div>
-        <div style="padding:15px; font-size:12px; color:var(--red); font-weight:bold;">RELATED VIDEOS</div>
+        <div id="v-info" style="padding:18px; font-size: 16px; font-weight: 600; border-bottom: 1px solid #111;"></div>
         <div id="rel-grid" class="grid"></div>
     </div>
 
     <script>
         let isDS = localStorage.getItem('pro_ds') === 'true';
         if(isDS) document.getElementById('ds-toggle').classList.add('on');
+
+        window.onpopstate = function() {
+            if (document.getElementById('player-page').style.display === 'block') {
+                document.getElementById('player-page').style.display = 'none';
+                document.getElementById('main-v').src = '';
+                document.body.style.overflow = 'auto';
+            }
+            toggleSB(false);
+        };
 
         function toggleSB(show) {
             document.getElementById('sb').classList.toggle('active', show);
@@ -111,12 +127,12 @@ const html = `
             if(!query) return;
             toggleSB(false);
             document.getElementById('loader').style.display = 'block';
-            
             try {
                 const res = await fetch('/api/search?q=' + encodeURIComponent(query));
                 const data = await res.json();
                 renderFeed('home-feed', data);
                 localStorage.setItem('last_search', query);
+                window.scrollTo(0,0);
             } finally {
                 document.getElementById('loader').style.display = 'none';
             }
@@ -124,16 +140,20 @@ const html = `
 
         function renderFeed(id, data) {
             document.getElementById(id).innerHTML = data.map(v => \`
-                <div class="v-card" onclick="openPlayer('\${v.videoId}', '\${v.title}', '\${v.thumbnail}')">
+                <div class="v-card" onclick="openPlayer('\${v.videoId}', '\${v.title.replace(/'/g, "")}', '\${v.thumbnail}')">
                     <img src="\${isDS ? v.thumbnail.replace('hqdefault', 'mqdefault') : v.thumbnail}">
                     <div class="v-title">\${v.title}</div>
                 </div>\`).join('');
         }
 
         async function openPlayer(id, title, thumb) {
+            history.pushState({player: true}, '');
             document.getElementById('player-page').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            // YT Logo Click Fix: Modestbranding aur Sandbox combined
             const q = isDS ? 'small' : 'hd1080';
-            document.getElementById('main-v').src = "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&modestbranding=1&rel=0&vq=" + q;
+            document.getElementById('main-v').src = "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&vq=" + q;
             document.getElementById('v-info').innerText = title;
 
             saveHistory(id, title, thumb);
@@ -143,9 +163,7 @@ const html = `
         }
 
         function toggleDS() {
-            isDS = !isDS;
-            localStorage.setItem('pro_ds', isDS);
-            document.getElementById('ds-toggle').classList.toggle('on');
+            localStorage.setItem('pro_ds', !isDS);
             location.reload();
         }
 
@@ -162,7 +180,7 @@ const html = `
             document.getElementById('h-list').innerHTML = h.map(i => \`
                 <div class="hist-card">
                     <img src="\${i.thumb}" onclick="openPlayer('\${i.id}', '\${i.title}', '\${i.thumb}')">
-                    <div style="font-size:11px;" onclick="openPlayer('\${i.id}', '\${i.title}', '\${i.thumb}')">\${i.title.substring(0,35)}...</div>
+                    <div style="font-size:11px; flex:1;" onclick="openPlayer('\${i.id}', '\${i.title}', '\${i.thumb}')">\${i.title.substring(0,35)}...</div>
                     <div class="hist-del" onclick="deleteHistory('\${i.id}')">🗑</div>
                 </div>\`).join('');
         }
@@ -172,8 +190,6 @@ const html = `
             localStorage.setItem('pro_h', JSON.stringify(h.filter(x => x.id !== id)));
             loadHistory();
         }
-
-        function closePlayer() { document.getElementById('player-page').style.display = 'none'; document.getElementById('main-v').src = ''; }
 
         window.onload = () => {
             const ls = localStorage.getItem('last_search') || 'trending';
@@ -194,4 +210,4 @@ app.get('/api/search', async (req, res) => {
     } catch (e) { res.json([]); }
 });
 
-app.listen(PORT, () => console.log('✅ ProTube Pro Stable Live!'));
+app.listen(PORT, () => console.log('✅ ProTube Premium Locked & Live!'));
